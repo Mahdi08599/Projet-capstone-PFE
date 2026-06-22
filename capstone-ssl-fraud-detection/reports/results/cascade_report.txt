@@ -1,0 +1,13 @@
+SYSTEME EN CASCADE — RAPPORT
+==================================================
+
+Seuil haut : 0.83
+Seuil bas  : 0.3
+
+Recall global    : 0.7776
+Precision globale: 0.4057
+F1 global        : 0.5332
+
+Fraudes detectees : 3214 / 4133
+Fraudes ratees    : 919
+Benefice net      : $360,041

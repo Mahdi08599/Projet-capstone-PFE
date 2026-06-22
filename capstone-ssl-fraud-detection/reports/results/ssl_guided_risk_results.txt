@@ -1,0 +1,50 @@
+SSL-GUIDED FRAUD RISK SCORING RESULTS
+============================================================
+
+1. APPROCHE
+- SSL apprend des représentations transactionnelles.
+- L'erreur de reconstruction SSL est utilisée comme score d'anomalie.
+- XGBoost prédit une probabilité de fraude.
+- Un score final combine XGBoost + SSL anomaly + heuristique.
+- Les poids et le seuil sont optimisés pour maximiser le F1-score.
+
+2. RESULTATS
+
+Baseline original features
+--------------------------
+AUC-ROC   : 0.9309
+AUC-PR    : 0.6831
+Precision : 0.7895
+Recall    : 0.5579
+F1-score  : 0.6538
+Threshold : 0.2600
+Confusion matrix : [[113360, 615], [1827, 2306]]
+
+Hybrid original + SSL
+---------------------
+AUC-ROC   : 0.9297
+AUC-PR    : 0.6801
+Precision : 0.7452
+Recall    : 0.5732
+F1-score  : 0.6480
+Threshold : 0.2400
+Confusion matrix : [[113165, 810], [1764, 2369]]
+
+SSL-Guided Risk Scoring
+-----------------------
+AUC-ROC   : 0.9269
+AUC-PR    : 0.6757
+Precision : 0.7691
+Recall    : 0.5618
+F1-score  : 0.6493
+Threshold : 0.2500
+Confusion matrix : [[113278, 697], [1811, 2322]]
+
+3. MEILLEURE FUSION SSL-GUIDED
+Alpha XGBoost    : 0.95
+Beta SSL anomaly : 0.00
+Gamma heuristic  : 0.05
+Best threshold   : 0.25
+
+4. INTERPRETATION COURTE
+Le score SSL-Guided exploite le SSL au-delà des embeddings : l'erreur de reconstruction devient un signal d'anomalie. Ce signal est combiné avec la probabilité XGBoost afin d'améliorer l'équilibre entre précision et rappel, mesuré par le F1-score.

@@ -1,0 +1,12 @@
+COMPARISON RESULTS
+============================================================
+
+Baseline (XGBoost seul):
+  AUC=0.9158  Prec=0.7576  Rec=0.5408  F1=0.6311  Seuil=0.25
+
+SSL embeddings + XGBoost:
+  AUC=0.8510  Prec=0.5565  Rec=0.3586  F1=0.4361  Seuil=0.20
+
+SSL + originales + XGBoost:
+  AUC=0.9137  Prec=0.7539  Rec=0.5352  F1=0.6260  Seuil=0.25
+

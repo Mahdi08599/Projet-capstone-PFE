@@ -1,0 +1,16 @@
+FRAUD DETECTION RESULTS (V2)
+Threshold : 0.85
+AUC-ROC   : 0.8932
+AP        : 0.4649
+Precision : 0.5047
+Recall    : 0.4319
+F1        : 0.4654
+
+              precision    recall  f1-score   support
+
+    Légitime       0.98      0.98      0.98    113975
+      Fraude       0.50      0.43      0.47      4133
+
+    accuracy                           0.97    118108
+   macro avg       0.74      0.71      0.72    118108
+weighted avg       0.96      0.97      0.96    118108

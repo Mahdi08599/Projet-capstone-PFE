@@ -1,0 +1,19 @@
+==================================================
+FRAUD DETECTION RESULTS
+==================================================
+
+AUC-ROC           : 0.8224
+Average Precision : 0.3305
+Precision         : 0.7910
+Recall            : 0.1365
+F1-score          : 0.2328
+
+Classification Report:
+              precision    recall  f1-score   support
+
+   Légitimes       0.97      1.00      0.98    113975
+     Fraudes       0.79      0.14      0.23      4133
+
+    accuracy                           0.97    118108
+   macro avg       0.88      0.57      0.61    118108
+weighted avg       0.96      0.97      0.96    118108

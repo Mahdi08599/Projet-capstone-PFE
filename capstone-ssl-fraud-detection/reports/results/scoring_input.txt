@@ -1,0 +1,32 @@
+Fichier scoring_input.csv créé automatiquement.
+
+Tu dois remplacer les exemples par tes vraies valeurs.
+
+Colonnes obligatoires :
+- y_true : vraie classe, 0 = non fraude, 1 = fraude
+- xgb_proba : probabilité de fraude donnée par XGBoost
+- ssl_reconstruction_error : erreur de reconstruction du modèle SSL
+
+Colonnes optionnelles mais utiles :
+- TransactionAmt : montant de la transaction
+- missing_ratio : taux de valeurs manquantes sur la ligne
+
+Exemple de création depuis ton notebook :
+
+import pandas as pd
+from pathlib import Path
+
+Path("reports/results").mkdir(parents=True, exist_ok=True)
+
+scoring_df = pd.DataFrame({
+    "y_true": y_test,
+    "xgb_proba": model.predict_proba(X_test_final)[:, 1],
+    "ssl_reconstruction_error": reconstruction_error,
+    "TransactionAmt": X_test_original["TransactionAmt"].values,
+    "missing_ratio": X_test_original.isnull().mean(axis=1).values
+})
+
+scoring_df.to_csv("reports/results/scoring_input.csv", index=False)
+
+Ensuite relance :
+python src/ssl_guided_risk_scoring.py

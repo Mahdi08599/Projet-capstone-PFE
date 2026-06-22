@@ -1,0 +1,9 @@
+ANALYSE DES FRAUDES NON DETECTEES
+Seuil : 0.4
+Fraudes ratees : 536 / 4133
+
+Montant median ratees    : $87
+Montant median detectees : $73
+
+Proches du seuil : 169
+Score tres bas   : 61

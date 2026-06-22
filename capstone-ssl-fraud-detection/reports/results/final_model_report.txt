@@ -1,0 +1,64 @@
+MODELE FINAL — RESULTATS
+============================================================
+
+AUC-ROC: 0.9494
+Average Precision: 0.7020
+
+SCENARIOS DE SEUIL:
+------------------------------------------------------------
+
+best_f1:
+  Seuil     : 0.83
+  Precision : 0.7458
+  Recall    : 0.5991
+  F1        : 0.6644
+  Detectees : 2476 / 4133
+  Faux pos  : 844
+  Benefice  : $319,124
+
+best_profit:
+  Seuil     : 0.67
+  Precision : 0.4808
+  Recall    : 0.7375
+  F1        : 0.5821
+  Detectees : 3048 / 4133
+  Faux pos  : 3292
+  Benefice  : $359,052
+
+high_recall:
+  Seuil     : 0.72
+  Precision : 0.5552
+  Recall    : 0.7002
+  F1        : 0.6193
+  Detectees : 2894 / 4133
+  Faux pos  : 2319
+  Benefice  : $353,011
+
+very_high_recall:
+  Seuil     : 0.55
+  Precision : 0.3384
+  Recall    : 0.8026
+  F1        : 0.4760
+  Detectees : 3317 / 4133
+  Faux pos  : 6486
+  Benefice  : $347,188
+
+good_precision:
+  Seuil     : 0.69
+  Precision : 0.5115
+  Recall    : 0.7234
+  F1        : 0.5993
+  Detectees : 2990 / 4133
+  Faux pos  : 2855
+  Benefice  : $357,835
+
+
+CLASSIFICATION REPORT (seuil meilleur F1):
+              precision    recall  f1-score   support
+
+    Legitime       0.99      0.99      0.99    113975
+      Fraude       0.75      0.60      0.66      4133
+
+    accuracy                           0.98    118108
+   macro avg       0.87      0.80      0.83    118108
+weighted avg       0.98      0.98      0.98    118108

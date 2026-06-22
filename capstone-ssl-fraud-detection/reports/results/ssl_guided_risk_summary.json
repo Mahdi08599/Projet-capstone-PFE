@@ -1,0 +1,90 @@
+{
+    "classifier_baseline": "XGBoost",
+    "classifier_hybrid": "XGBoost",
+    "n_train": 472432,
+    "n_val": 118108,
+    "n_original_features": 743,
+    "n_ssl_embeddings": 96,
+    "ssl_epochs": 20,
+    "mask_ratio": 0.15,
+    "best_guided": {
+        "f1": 0.6493288590604027,
+        "precision": 0.7691288506127857,
+        "recall": 0.5618195015727074,
+        "auc_roc": 0.9268717097716118,
+        "auc_pr": 0.6756837114285953,
+        "threshold": 0.25,
+        "alpha": 0.9500000000000001,
+        "beta": 0.0,
+        "gamma": 0.04999999999999993,
+        "confusion_matrix": [
+            [
+                113278,
+                697
+            ],
+            [
+                1811,
+                2322
+            ]
+        ]
+    },
+    "metrics": {
+        "Baseline original features": {
+            "threshold": 0.26,
+            "precision": 0.7894556658678534,
+            "recall": 0.5579482216307767,
+            "f1": 0.653813439183442,
+            "confusion_matrix": [
+                [
+                    113360,
+                    615
+                ],
+                [
+                    1827,
+                    2306
+                ]
+            ],
+            "auc_roc": 0.930857416010861,
+            "auc_pr": 0.683125807436977
+        },
+        "Hybrid original + SSL": {
+            "threshold": 0.24000000000000002,
+            "precision": 0.7452028939918214,
+            "recall": 0.5731913864021292,
+            "f1": 0.6479759299781181,
+            "confusion_matrix": [
+                [
+                    113165,
+                    810
+                ],
+                [
+                    1764,
+                    2369
+                ]
+            ],
+            "auc_roc": 0.9297284430649748,
+            "auc_pr": 0.680140087443181
+        },
+        "SSL-Guided Risk Scoring": {
+            "f1": 0.6493288590604027,
+            "precision": 0.7691288506127857,
+            "recall": 0.5618195015727074,
+            "auc_roc": 0.9268717097716118,
+            "auc_pr": 0.6756837114285953,
+            "threshold": 0.25,
+            "alpha": 0.9500000000000001,
+            "beta": 0.0,
+            "gamma": 0.04999999999999993,
+            "confusion_matrix": [
+                [
+                    113278,
+                    697
+                ],
+                [
+                    1811,
+                    2322
+                ]
+            ]
+        }
+    }
+}

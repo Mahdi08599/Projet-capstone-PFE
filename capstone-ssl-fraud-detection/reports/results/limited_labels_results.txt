@@ -1,0 +1,38 @@
+LIMITED LABELS EXPERIMENT
+============================================================
+
+1.0% labels:
+  Baseline: AUC=0.8323 F1=0.4392 Rec=0.3828
+  SSL:      AUC=0.8177 F1=0.4181 Rec=0.3675
+  Gain:     AUC=-0.0146 F1=-0.0211
+
+2.0% labels:
+  Baseline: AUC=0.8486 F1=0.4554 Rec=0.4256
+  SSL:      AUC=0.8459 F1=0.4506 Rec=0.4096
+  Gain:     AUC=-0.0026 F1=-0.0048
+
+5.0% labels:
+  Baseline: AUC=0.8751 F1=0.4885 Rec=0.4101
+  SSL:      AUC=0.8706 F1=0.4832 Rec=0.3973
+  Gain:     AUC=-0.0045 F1=-0.0053
+
+10.0% labels:
+  Baseline: AUC=0.8815 F1=0.5146 Rec=0.4254
+  SSL:      AUC=0.8801 F1=0.5176 Rec=0.4278
+  Gain:     AUC=-0.0015 F1=+0.0030
+
+25.0% labels:
+  Baseline: AUC=0.8915 F1=0.5459 Rec=0.4825
+  SSL:      AUC=0.8905 F1=0.5455 Rec=0.4459
+  Gain:     AUC=-0.0010 F1=-0.0004
+
+50.0% labels:
+  Baseline: AUC=0.8964 F1=0.5643 Rec=0.4979
+  SSL:      AUC=0.8943 F1=0.5635 Rec=0.4619
+  Gain:     AUC=-0.0021 F1=-0.0008
+
+100.0% labels:
+  Baseline: AUC=0.8977 F1=0.5647 Rec=0.5001
+  SSL:      AUC=0.8970 F1=0.5726 Rec=0.4706
+  Gain:     AUC=-0.0007 F1=+0.0079
+
