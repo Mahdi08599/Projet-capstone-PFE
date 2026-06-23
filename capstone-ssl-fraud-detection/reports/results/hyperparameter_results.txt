@@ -1,0 +1,20 @@
+HYPERPARAMETER TUNING RESULTS
+==================================================
+
+Best params:
+  colsample_bytree: 0.7364265404201034
+  gamma: 0.056736760620294535
+  learning_rate: 0.14870404274178442
+  max_depth: 9
+  min_child_weight: 3
+  n_estimators: 562
+  reg_alpha: 0.659984046034179
+  reg_lambda: 2.1344444004024314
+  subsample: 0.822080324639785
+
+AUC-ROC      : 0.9718
+Avg Precision: 0.8608
+F1           : 0.8210
+Precision    : 0.8797
+Recall       : 0.7697
+Seuil        : 0.56
