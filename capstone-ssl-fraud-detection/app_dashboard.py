@@ -33,6 +33,24 @@ FINAL_METRICS = {
     "auc": 0.9718, "avg_precision": 0.8608, "f1": 0.8210,
     "precision": 0.8797, "recall": 0.7697, "threshold": 0.56,
 }
+BUSINESS_TOTALS = {
+    "transactions": 590540,
+    "frauds": 20663,
+    "fraud_amount": 3083845,
+    "fraud_mean": 149.24,
+    "detected_frauds": 15904,
+    "false_alerts": 2174,
+    "saved_amount": 2373635,
+    "investigation_cost": 271170,
+    "net_benefit": 2102465,
+}
+PRODUCT_KPIS = pd.DataFrame([
+    {"ProductCD": "C", "total": 68519, "frauds": 8008, "taux": 11.69},
+    {"ProductCD": "S", "total": 11628, "frauds": 686, "taux": 5.90},
+    {"ProductCD": "H", "total": 33024, "frauds": 1574, "taux": 4.77},
+    {"ProductCD": "R", "total": 37699, "frauds": 1426, "taux": 3.78},
+    {"ProductCD": "W", "total": 439670, "frauds": 8969, "taux": 2.04},
+])
 BEST_PARAMS = {
     "colsample_bytree": 0.736, "gamma": 0.057, "learning_rate": 0.149,
     "max_depth": 9, "min_child_weight": 3, "n_estimators": 562,
@@ -67,6 +85,16 @@ def load_raw_data():
     tx = pd.read_csv(os.path.join(DATA_RAW, "train_transaction.csv"))
     ident = pd.read_csv(os.path.join(DATA_RAW, "train_identity.csv"))
     return tx.merge(ident, on="TransactionID", how="left")
+
+
+@st.cache_data
+def load_kpi_data():
+    """Charge uniquement les colonnes utiles aux KPIs pour eviter un crash memoire cloud."""
+    tx_path = os.path.join(DATA_RAW, "train_transaction.csv")
+    if not os.path.exists(tx_path):
+        return None
+    usecols = ["isFraud", "TransactionAmt", "ProductCD", "TransactionDT"]
+    return pd.read_csv(tx_path, usecols=usecols)
 
 
 @st.cache_data
@@ -859,17 +887,30 @@ elif page == "🔍 Exploration des données":
 elif page == "📈 KPIs Business":
     st.title("📈 KPIs Métier — Fraude Bancaire")
     try:
-        df = load_raw_data()
-        fraud = df[df.isFraud == 1]
+        df = load_kpi_data()
+        if df is None:
+            st.warning(
+                "Dataset brut indisponible sur l'environnement courant. "
+                "La page affiche les KPIs valides issus du rapport projet."
+            )
+            prod = PRODUCT_KPIS.copy()
+            fraud_count = BUSINESS_TOTALS["frauds"]
+            fraud_amount = BUSINESS_TOTALS["fraud_amount"]
+            fraud_mean = BUSINESS_TOTALS["fraud_mean"]
+        else:
+            fraud = df[df.isFraud == 1]
+            prod = df.groupby("ProductCD").agg(total=("isFraud","count"), frauds=("isFraud","sum")).reset_index()
+            prod["taux"] = prod["frauds"]/prod["total"]*100
+            fraud_count = len(fraud)
+            fraud_amount = fraud["TransactionAmt"].sum()
+            fraud_mean = fraud["TransactionAmt"].mean()
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Volume frauduleux", f"${fraud['TransactionAmt'].sum():,.0f}")
-        c2.metric("Montant moyen fraude", f"${fraud['TransactionAmt'].mean():.0f}")
+        c1.metric("Volume frauduleux", money_usd(fraud_amount))
+        c2.metric("Montant moyen fraude", money_usd(fraud_mean, 0))
         c3.metric("Produit le + ciblé", "C (11.7%)")
         c4.metric("Pic de fraude", "7h (10.5%)")
         st.markdown("---")
         st.subheader("Taux de fraude par produit")
-        prod = df.groupby("ProductCD").agg(total=("isFraud","count"), frauds=("isFraud","sum")).reset_index()
-        prod["taux"] = prod["frauds"]/prod["total"]*100
         prod = prod.sort_values("taux", ascending=False)
         fig = px.bar(prod, x="ProductCD", y="taux", color="taux",
                     color_continuous_scale=["#22c55e","#eab308","#dc2626"],
@@ -918,13 +959,19 @@ elif page == "📈 KPIs Business":
         st.info("W genere beaucoup de fraudes car son volume de transactions est massif, meme si son taux de fraude est faible.")
 
         st.subheader("Distribution horaire des fraudes")
-        df["hour"] = (df["TransactionDT"]/3600%24).astype(int)
-        hourly = df.groupby("hour").agg(total=("isFraud","count"), frauds=("isFraud","sum")).reset_index()
-        hourly["taux"] = hourly["frauds"]/hourly["total"]*100
-        fig = px.bar(hourly, x="hour", y="taux", color="taux",
-                    color_continuous_scale=["#22c55e","#eab308","#dc2626"])
-        fig.update_layout(height=350, showlegend=False, xaxis=dict(dtick=1))
-        st.plotly_chart(fig, use_container_width=True)
+        if df is not None:
+            df["hour"] = (df["TransactionDT"]/3600%24).astype(int)
+            hourly = df.groupby("hour").agg(total=("isFraud","count"), frauds=("isFraud","sum")).reset_index()
+            hourly["taux"] = hourly["frauds"]/hourly["total"]*100
+            fig = px.bar(hourly, x="hour", y="taux", color="taux",
+                        color_continuous_scale=["#22c55e","#eab308","#dc2626"])
+            fig.update_layout(height=350, showlegend=False, xaxis=dict(dtick=1))
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            fig_path = os.path.join(FIGURES_DIR, "business_temporel.png")
+            if os.path.exists(fig_path):
+                st.image(fig_path, use_container_width=True)
+            st.caption("Vue pre-calculee depuis le rapport KPI : le pic de risque apparait autour de 7h.")
 
         st.markdown("---")
         st.subheader("Graphes explicatifs issus des rapports métier")
@@ -995,8 +1042,8 @@ elif page == "📈 KPIs Business":
             recall_pct = st.slider("Recall (%)", 10, 95, 77)
             cost_inv = st.number_input("Coût investigation ($)", 5, 50, 15)
         recall = recall_pct/100
-        n_det = int(len(fraud)*recall)
-        saved = fraud["TransactionAmt"].sum()*recall
+        n_det = int(fraud_count*recall)
+        saved = fraud_amount*recall
         n_fp = int(n_det*(1-FINAL_METRICS["precision"])/FINAL_METRICS["precision"])
         net = saved-(n_det+n_fp)*cost_inv
         with col2:
