@@ -22,11 +22,12 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-DATA_RAW = os.path.join("data", "raw")
-DATA_PROC = os.path.join("data", "processed")
-MODELS_DIR = "models"
-RESULTS_DIR = os.path.join("reports", "results")
-FIGURES_DIR = os.path.join("reports", "figures")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_RAW = os.path.join(BASE_DIR, "data", "raw")
+DATA_PROC = os.path.join(BASE_DIR, "data", "processed")
+MODELS_DIR = os.path.join(BASE_DIR, "models")
+RESULTS_DIR = os.path.join(BASE_DIR, "reports", "results")
+FIGURES_DIR = os.path.join(BASE_DIR, "reports", "figures")
 
 FINAL_METRICS = {
     "auc": 0.9718, "avg_precision": 0.8608, "f1": 0.8210,
@@ -79,11 +80,15 @@ def load_predictions():
 
 @st.cache_data
 def load_transaction_lookup():
+    tx_path = os.path.join(DATA_RAW, "train_transaction.csv")
+    if not os.path.exists(tx_path):
+        return None
+
     tx_cols = [
         "TransactionID", "isFraud", "TransactionDT", "TransactionAmt", "ProductCD",
         "card4", "card6", "P_emaildomain", "R_emaildomain",
     ]
-    tx = pd.read_csv(os.path.join(DATA_RAW, "train_transaction.csv"), usecols=tx_cols)
+    tx = pd.read_csv(tx_path, usecols=tx_cols)
     identity_path = os.path.join(DATA_RAW, "train_identity.csv")
     if os.path.exists(identity_path):
         id_head = pd.read_csv(identity_path, nrows=0)
@@ -143,6 +148,13 @@ def answer_transaction_lookup(question):
 
     transaction_id = int(id_match.group(1))
     df = load_transaction_lookup()
+    if df is None:
+        return (
+            "Le dataset brut n'est pas disponible dans cette version déployée. "
+            "Je peux expliquer les résultats du modèle, les KPIs et le seuil métier, mais la recherche par TransactionID "
+            "nécessite le fichier data/raw/train_transaction.csv.",
+            ["Dataset brut non disponible"],
+        )
     row = df[df["TransactionID"] == transaction_id]
     if row.empty:
         return (
@@ -187,6 +199,13 @@ def answer_product_lookup(question):
 
     product = product_match.group(1).upper()
     df = load_transaction_lookup()
+    if df is None:
+        return (
+            "Le dataset brut n'est pas disponible dans cette version déployée. "
+            "Je peux tout de même expliquer les KPIs produit à partir des rapports : W concentre beaucoup de fraudes en volume, "
+            "tandis que C est le produit le plus risqué en taux.",
+            ["Rapports métier"],
+        )
     prod = df[df["ProductCD"] == product]
     if prod.empty:
         return (
@@ -236,6 +255,13 @@ def answer_sample_analysis(question):
         return None
 
     df = load_transaction_lookup()
+    if df is None:
+        return (
+            "Je ne peux pas tirer un échantillon de transactions dans cette version déployée, car le dataset brut n'est pas présent. "
+            "Pour garder l'app légère sur Streamlit Cloud, on peut utiliser les rapports et figures pré-calculés ; "
+            "pour l'analyse transactionnelle complète, il faut ajouter une source de données accessible.",
+            ["Dataset brut non disponible"],
+        )
     sample_size = 10000
     sample = df.sample(n=min(sample_size, len(df)), random_state=42)
     frauds = int(sample["isFraud"].sum())
@@ -400,9 +426,13 @@ def answer_scenario_simulation(question):
     cost_inv = float(cost_match.group(1)) if cost_match else 15.0
 
     df = load_transaction_lookup()
-    fraud = df[df["isFraud"] == 1]
-    fraud_count = len(fraud)
-    fraud_amount = fraud["TransactionAmt"].sum()
+    if df is None:
+        fraud_count = 20663
+        fraud_amount = 3083845
+    else:
+        fraud = df[df["isFraud"] == 1]
+        fraud_count = len(fraud)
+        fraud_amount = fraud["TransactionAmt"].sum()
     detected = int(fraud_count * recall)
     saved = fraud_amount * recall
     false_alerts = int(detected * (1 - FINAL_METRICS["precision"]) / FINAL_METRICS["precision"])
