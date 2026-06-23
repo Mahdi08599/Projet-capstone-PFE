@@ -1,0 +1,38 @@
+============================================================
+PREPROCESSING REPORT
+============================================================
+
+Date : 2026-06-19 00:24:53
+Seed : 42
+
+Colonnes supprimées (>70% NaN) : 208
+  Exemples : ['dist2', 'R_emaildomain', 'D6', 'D7', 'D8', 'D9', 'D12', 'D13', 'D14', 'V138']
+
+Target isFraud :
+  Fraudes : 20,663 (3.50%)
+  Légitimes : 569,877 (96.50%)
+
+Types de colonnes :
+  Numériques : 211
+  Catégorielles : 13
+
+Valeurs manquantes restantes : 0
+
+Encodage catégoriel :
+  ProductCD : 5 classes
+  card4 : 5 classes
+  card6 : 5 classes
+  P_emaildomain : 60 classes
+  M1 : 3 classes
+  M2 : 3 classes
+  M3 : 3 classes
+  M4 : 4 classes
+  M5 : 3 classes
+  M6 : 3 classes
+  M7 : 3 classes
+  M8 : 3 classes
+  M9 : 3 classes
+
+Split train/validation :
+  Train : 472,432 lignes (16,530 fraudes)
+  Val   : 118,108 lignes (4,133 fraudes)

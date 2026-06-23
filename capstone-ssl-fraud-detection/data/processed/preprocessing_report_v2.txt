@@ -1,0 +1,27 @@
+PREPROCESSING V2 REPORT
+============================================================
+
+CHANGEMENTS PAR RAPPORT À V1 :
+  - Seuil NaN : 70% -> 95%
+  - Indicateurs de valeurs manquantes ajoutés
+  - Frequency encoding au lieu de LabelEncoder
+  - Features temporelles (hour, day, night, peak)
+  - Log-transformation du montant
+
+Colonnes supprimées (>95% NaN) : 9
+Colonnes restantes : 425 (V1 en gardait 226=226)
+
+Fraudes : 20,663 / 590,540 (3.50%)
+
+Features temporelles ajoutées : hour, day_of_week, is_night, is_peak_fraud_hour
+Features montant ajoutées : TransactionAmt_log, TransactionAmt_is_round
+
+Indicateurs de NaN créés : 314
+  (V1 n'en créait aucun — on perdait l'info 'valeur absente')
+
+Frequency encoding : 29 colonnes
+  (V1 utilisait LabelEncoder — ordres arbitraires)
+  (V2 utilise la fréquence — plus informatif)
+
+Split : Train 472,432 | Val 118,108
+Total features : 743

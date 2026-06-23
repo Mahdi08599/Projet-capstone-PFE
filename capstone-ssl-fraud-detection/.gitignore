@@ -1,8 +1,5 @@
-# Data (too large for git)
-data/raw/
-data/processed/
-*.csv
-*.parquet
+# Data files are versioned through Git LFS for deployment.
+# See ../.gitattributes for CSV/Parquet LFS tracking.
 
 # Models (too large for git)
 models/*.pt
