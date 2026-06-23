@@ -28,9 +28,10 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-RAW_DIR = os.path.join("..", "data", "raw")
-FIGURES_DIR = os.path.join("..", "reports", "figures")
-RESULTS_DIR = os.path.join("..", "reports", "results")
+PROJECT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+RAW_DIR = os.path.join(PROJECT_DIR, "data", "raw")
+FIGURES_DIR = os.path.join(PROJECT_DIR, "reports", "figures")
+RESULTS_DIR = os.path.join(PROJECT_DIR, "reports", "results")
 os.makedirs(FIGURES_DIR, exist_ok=True)
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
@@ -126,7 +127,18 @@ def kpi_produits_cibles(df, report):
                       f"({row['frauds']:,.0f} fraudes / {row['total']:,} tx) "
                       f"| Montant moyen : ${row['montant_moyen']:.0f}")
 
+    w_row = product_stats[product_stats["ProductCD"] == "W"].iloc[0]
+    c_row = product_stats[product_stats["ProductCD"] == "C"].iloc[0]
+    report.append("")
+    report.append("  Lecture metier : taux de fraude vs exposition")
+    report.append(f"    Produit C : {c_row['taux_fraude']:.2f}% de fraude sur {int(c_row['total']):,} transactions")
+    report.append(f"    Produit W : {w_row['taux_fraude']:.2f}% de fraude sur {int(w_row['total']):,} transactions")
+    report.append("    Le produit W a le taux de fraude le plus faible, mais il concentre")
+    report.append("    le plus grand nombre de transactions. Son volume eleve d'exposition")
+    report.append("    explique pourquoi il genere beaucoup de fraudes en valeur absolue.")
+
     print(product_stats[["ProductCD", "total", "frauds", "taux_fraude"]].to_string(index=False))
+    plot_product_exposure(product_stats)
 
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 
@@ -149,6 +161,73 @@ def kpi_produits_cibles(df, report):
     fig.savefig(os.path.join(FIGURES_DIR, "business_produits.png"), dpi=150)
     plt.close()
     print("  ✓ business_produits.png")
+
+
+def plot_product_exposure(product_stats):
+    """Explique l'effet volume derriere le produit W."""
+    exposure = product_stats.sort_values("total", ascending=False).copy()
+    sizes = 450 + exposure["frauds"] / exposure["frauds"].max() * 2600
+
+    fig, ax = plt.subplots(figsize=(11, 6))
+    scatter = ax.scatter(
+        exposure["total"],
+        exposure["taux_fraude"],
+        s=sizes,
+        c=exposure["frauds"],
+        cmap="YlOrRd",
+        edgecolor="#111827",
+        linewidth=1,
+        alpha=0.85,
+    )
+
+    for _, row in exposure.iterrows():
+        ax.text(
+            row["total"],
+            row["taux_fraude"],
+            f"{row['ProductCD']}\n{int(row['frauds']):,} fraudes",
+            ha="center",
+            va="center",
+            fontsize=10,
+            fontweight="bold",
+        )
+
+    w = exposure[exposure["ProductCD"] == "W"].iloc[0]
+    c = exposure[exposure["ProductCD"] == "C"].iloc[0]
+    ax.annotate(
+        "W : faible taux, mais tres forte exposition",
+        xy=(w["total"], w["taux_fraude"]),
+        xytext=(w["total"] * 0.58, w["taux_fraude"] + 3.0),
+        arrowprops={"arrowstyle": "->", "color": "#111827"},
+        fontsize=10,
+    )
+    ax.annotate(
+        "C : taux de fraude le plus eleve",
+        xy=(c["total"], c["taux_fraude"]),
+        xytext=(c["total"] * 1.7, c["taux_fraude"] - 1.1),
+        arrowprops={"arrowstyle": "->", "color": "#111827"},
+        fontsize=10,
+    )
+
+    ax.set_title("Produit W : effet volume dans le nombre de fraudes", fontsize=14)
+    ax.set_xlabel("Nombre total de transactions du produit")
+    ax.set_ylabel("Taux de fraude du produit (%)")
+    ax.set_xlim(-15000, exposure["total"].max() * 1.10)
+    ax.set_ylim(0.8, exposure["taux_fraude"].max() * 1.18)
+    ax.grid(alpha=0.25)
+    cbar = fig.colorbar(scatter, ax=ax)
+    cbar.set_label("Nombre de fraudes observees")
+    ax.text(
+        0.02,
+        0.02,
+        "Lecture : fraudes observees = volume de transactions x taux de fraude",
+        transform=ax.transAxes,
+        fontsize=10,
+        bbox={"boxstyle": "round,pad=0.4", "facecolor": "#F8FAFC", "edgecolor": "#CBD5E1"},
+    )
+    fig.tight_layout()
+    fig.savefig(os.path.join(FIGURES_DIR, "business_produits_exposition.png"), dpi=150)
+    plt.close()
+    print("  business_produits_exposition.png")
 
 
 def kpi_cartes(df, report):
@@ -395,6 +474,64 @@ def kpi_desequilibre(df, report):
     fig.savefig(os.path.join(FIGURES_DIR, "business_desequilibre.png"), dpi=150)
     plt.close()
     print("  ✓ business_desequilibre.png")
+
+
+def kpi_impact_modele(df, report):
+    """KPI 7 : Impact metier du modele final XGBoost optimise."""
+    print("\n--- KPI 7 : IMPACT METIER DU MODELE FINAL ---")
+
+    fraud = df[df["isFraud"] == 1]
+    total_fraud_amount = fraud["TransactionAmt"].sum()
+    n_frauds = len(fraud)
+
+    threshold = 0.56
+    precision = 0.8797
+    recall = 0.7697
+    f1 = 0.8210
+    auc_roc = 0.9718
+    average_precision = 0.8608
+
+    n_detected = int(n_frauds * recall)
+    amount_saved = total_fraud_amount * recall
+    n_false_alerts = int(n_detected / precision) - n_detected
+
+    cost_per_investigation = 15
+    cost_investigations = (n_detected + n_false_alerts) * cost_per_investigation
+    net_benefit = amount_saved - cost_investigations
+
+    report.append("\n" + "=" * 55)
+    report.append("KPI 7 : IMPACT METIER DU MODELE FINAL")
+    report.append("=" * 55)
+    report.append(f"  Fraudes dans le dataset       : {n_frauds:,}")
+    report.append(f"  Montant total frauduleux      : ${total_fraud_amount:,.0f}")
+    report.append("")
+    report.append(f"  Modele retenu : XGBoost optimise + seuil optimal {threshold:.2f}")
+    report.append(f"    AUC-ROC                       : {auc_roc:.4f}")
+    report.append(f"    Average Precision             : {average_precision:.4f}")
+    report.append(f"    Precision                     : {precision:.1%}")
+    report.append(f"    Recall                        : {recall:.1%}")
+    report.append(f"    F1-score                      : {f1:.4f}")
+    report.append("")
+    report.append("  Impact estime sur l'ensemble du dataset :")
+    report.append(f"    Fraudes detectees            : {n_detected:,} / {n_frauds:,}")
+    report.append(f"    Montant sauve estime         : ${amount_saved:,.0f}")
+    report.append(f"    Fausses alertes              : {n_false_alerts:,}")
+    report.append(f"    Cout d'investigation         : ${cost_investigations:,.0f}")
+    report.append(f"    Benefice net estime          : ${net_benefit:,.0f}")
+    report.append("")
+    report.append("  Lecture metier :")
+    report.append(f"    Le seuil {threshold:.2f} maximise le F1-score du modele final.")
+    report.append("    Il combine une precision proche de 88% avec un recall proche de 77%,")
+    report.append("    ce qui donne un bon compromis entre detection des fraudes, charge")
+    report.append("    d'investigation et experience client.")
+    report.append("")
+    report.append("  Sans modele (tout manuel) :")
+    report.append(f"    Cout si on verifie tout      : ${len(df) * cost_per_investigation:,.0f}")
+    report.append(f"    Cout si on ne verifie rien   : ${total_fraud_amount:,.0f} de pertes")
+
+    print(f"  Fraudes detectees : {n_detected:,} / {n_frauds:,}")
+    print(f"  Montant sauve    : ${amount_saved:,.0f}")
+    print(f"  Benefice net     : ${net_benefit:,.0f}")
 
 
 def run():

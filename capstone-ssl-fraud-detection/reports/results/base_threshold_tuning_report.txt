@@ -1,0 +1,80 @@
+ADAPTATION DU SEUIL - MODELE XGBOOST BASE OPTIMISE
+==============================================================
+
+AUC-ROC          : 0.9718
+Average Precision: 0.8608
+Fraudes validation: 4,133
+Hypothese montant moyen fraude: $149
+Hypothese cout investigation : $15
+Figure: reports\figures\base_threshold_tuning.png
+
+SEUIL RETENU POUR LA STRATEGIE BANQUE DIGITALE
+--------------------------------------------------------------
+Seuil recommande : 0.56
+Logique          : maximiser le F1-score du modele final optimise
+Lecture metier   : compromis precision / recall avec forte performance operationnelle
+Precision        : 0.8797
+Recall           : 0.7697
+F1-score         : 0.8210
+Faux positifs    : 435
+Alertes totales  : 3,616
+Benefice net     : $419,729
+Ecart vs profit max : -$20,164
+Reduction FP vs profit max : 1,166
+
+Interpretation : ce seuil detecte une part importante des fraudes tout en
+gardant une precision elevee. Il limite la charge d'investigation et reduit
+le risque de bloquer inutilement des clients legitimes.
+
+SCENARIOS DE SEUIL
+--------------------------------------------------------------
+
+Meilleur F1
+  Seuil       : 0.56
+  Precision   : 0.8797
+  Recall      : 0.7697
+  F1-score    : 0.8210
+  Fraudes detectees : 3,181 / 4,133
+  Faux positifs     : 435
+  Alertes totales   : 3,616
+  Benefice net      : $419,729
+
+Benefice maximal
+  Seuil       : 0.27
+  Precision   : 0.6838
+  Recall      : 0.8376
+  F1-score    : 0.7529
+  Fraudes detectees : 3,462 / 4,133
+  Faux positifs     : 1,601
+  Alertes totales   : 5,063
+  Benefice net      : $439,893
+
+Recall >= 80%
+  Seuil       : 0.42
+  Precision   : 0.8049
+  Recall      : 0.8004
+  F1-score    : 0.8026
+  Fraudes detectees : 3,308 / 4,133
+  Faux positifs     : 802
+  Alertes totales   : 4,110
+  Benefice net      : $431,242
+
+Precision >= 85%
+  Seuil       : 0.50
+  Precision   : 0.8541
+  Recall      : 0.7847
+  F1-score    : 0.8179
+  Fraudes detectees : 3,243 / 4,133
+  Faux positifs     : 554
+  Alertes totales   : 3,797
+  Benefice net      : $426,252
+
+Equilibre banque digitale
+  Seuil       : 0.43
+  Precision   : 0.8124
+  Recall      : 0.7994
+  F1-score    : 0.8059
+  Fraudes detectees : 3,304 / 4,133
+  Faux positifs     : 763
+  Alertes totales   : 4,067
+  Benefice net      : $431,291

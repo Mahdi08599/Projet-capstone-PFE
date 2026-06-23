@@ -1,0 +1,44 @@
+STRATEGIE DE SEUIL - BANQUE DIGITALE
+==================================================
+
+Choix retenu : seuil 0.56, scenario Meilleur F1.
+
+Positionnement business
+--------------------------------------------------
+Le seuil retenu ne cherche pas seulement a maximiser une metrique ML.
+Il traduit une politique de risque exploitable par une banque digitale :
+detecter suffisamment de fraudes, maintenir une precision elevee, et
+eviter une surcharge excessive des equipes d'investigation.
+
+Resultats du seuil retenu
+--------------------------------------------------
+Seuil       : 0.56
+Precision   : 0.8797
+Recall      : 0.7697
+F1-score    : 0.8210
+Faux positifs: 435
+Benefice net: $419,729
+
+Comparaison avec le seuil de benefice maximal
+--------------------------------------------------
+Seuil profit max : 0.27
+Benefice perdu   : $20,164
+Faux positifs evites : 1,166
+Lecture : le seuil 0.56 accepte un benefice net plus faible, mais il
+reduit fortement la charge operationnelle et protege mieux l'experience client.
+
+Comparaison avec le seuil meilleur F1
+--------------------------------------------------
+Seuil meilleur F1 : 0.56
+F1 seuil retenu   : 0.8210
+F1 meilleur F1    : 0.8210
+Lecture : la performance statistique reste quasiment au niveau du meilleur F1,
+avec un positionnement metier plus oriente detection et benefice.
+
+Formulation soutenance
+--------------------------------------------------
+Nous retenons un seuil de 0.56 car il maximise le F1-score
+du modele final optimise tout en conservant une precision elevee et un recall fort.
+Ce choix est coherent pour une banque digitale : il detecte davantage de fraudes
+sans generer une charge excessive de faux positifs, et il garde un benefice net
+metier eleve.

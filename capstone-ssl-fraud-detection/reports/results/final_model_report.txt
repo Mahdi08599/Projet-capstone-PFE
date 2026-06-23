@@ -1,64 +1,80 @@
-MODELE FINAL — RESULTATS
+MODELE FINAL - XGBOOST OPTIMISE + SEUIL METIER
 ============================================================
 
-AUC-ROC: 0.9494
-Average Precision: 0.7020
+AUC-ROC: 0.9718
+Average Precision: 0.8608
 
-SCENARIOS DE SEUIL:
+SEUIL RETENU POUR LA BANQUE DIGITALE
 ------------------------------------------------------------
 
-best_f1:
-  Seuil     : 0.83
-  Precision : 0.7458
-  Recall    : 0.5991
-  F1        : 0.6644
-  Detectees : 2476 / 4133
-  Faux pos  : 844
-  Benefice  : $319,124
+Scenario: Meilleur F1
+Seuil   : 0.56
 
-best_profit:
-  Seuil     : 0.67
-  Precision : 0.4808
-  Recall    : 0.7375
-  F1        : 0.5821
-  Detectees : 3048 / 4133
-  Faux pos  : 3292
-  Benefice  : $359,052
+Precision : 0.8797
+Recall    : 0.7697
+F1        : 0.8210
 
-high_recall:
-  Seuil     : 0.72
-  Precision : 0.5552
-  Recall    : 0.7002
-  F1        : 0.6193
-  Detectees : 2894 / 4133
-  Faux pos  : 2319
-  Benefice  : $353,011
+Validation:
+  Fraudes detectees : 3,181 / 4,133
+  Faux positifs     : 435
+  Alertes totales   : 3,616
+  Benefice net      : $419,729
 
-very_high_recall:
-  Seuil     : 0.55
-  Precision : 0.3384
-  Recall    : 0.8026
-  F1        : 0.4760
-  Detectees : 3317 / 4133
-  Faux pos  : 6486
-  Benefice  : $347,188
+Projection metier sur le dataset complet:
+  Fraudes detectees : 15,904 / 20,663
+  Fausses alertes   : 2,174
+  Cout investigation: $271,170
+  Montant sauve     : $2,373,635
+  Benefice net      : $2,102,465
 
-good_precision:
-  Seuil     : 0.69
-  Precision : 0.5115
-  Recall    : 0.7234
-  F1        : 0.5993
-  Detectees : 2990 / 4133
-  Faux pos  : 2855
-  Benefice  : $357,835
+JUSTIFICATION METIER
+------------------------------------------------------------
 
+Le seuil 0.56 est retenu car il maximise le F1-score du modele final
+optimise. Il conserve une precision elevee proche de 88%, detecte pres
+de 77% des fraudes et limite fortement les faux positifs. Pour une banque
+digitale, ce seuil represente un compromis robuste entre detection,
+charge d'investigation, rentabilite et experience client.
 
-CLASSIFICATION REPORT (seuil meilleur F1):
-              precision    recall  f1-score   support
+SCENARIOS COMPARATIFS
+------------------------------------------------------------
 
-    Legitime       0.99      0.99      0.99    113975
-      Fraude       0.75      0.60      0.66      4133
+Meilleur F1:
+  Seuil     : 0.56
+  Precision : 0.8797
+  Recall    : 0.7697
+  F1        : 0.8210
+  Faux pos  : 435
+  Benefice  : $419,729
 
-    accuracy                           0.98    118108
-   macro avg       0.87      0.80      0.83    118108
-weighted avg       0.98      0.98      0.98    118108
+Benefice maximal:
+  Seuil     : 0.27
+  Precision : 0.6838
+  Recall    : 0.8376
+  F1        : 0.7529
+  Faux pos  : 1,601
+  Benefice  : $439,893
+
+Recall >= 80%:
+  Seuil     : 0.42
+  Precision : 0.8049
+  Recall    : 0.8004
+  F1        : 0.8026
+  Faux pos  : 802
+  Benefice  : $431,242
+
+Precision >= 85%:
+  Seuil     : 0.50
+  Precision : 0.8541
+  Recall    : 0.7847
+  F1        : 0.8179
+  Faux pos  : 554
+  Benefice  : $426,252
+
+Equilibre banque digitale:
+  Seuil     : 0.43
+  Precision : 0.8124
+  Recall    : 0.7994
+  F1        : 0.8059
+  Faux pos  : 763
+  Benefice  : $431,291

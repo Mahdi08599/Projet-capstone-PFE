@@ -23,6 +23,13 @@ KPI 2 : TAUX DE FRAUDE PAR PRODUIT
   R : 3.78% (1,426 fraudes / 37,699 tx) | Montant moyen : $168
   W : 2.04% (8,969 fraudes / 439,670 tx) | Montant moyen : $153
 
+  Lecture metier : taux de fraude vs exposition
+    Produit C : 11.69% de fraude sur 68,519 transactions
+    Produit W : 2.04% de fraude sur 439,670 transactions
+    Le produit W a le taux de fraude le plus faible, mais il concentre
+    le plus grand nombre de transactions. Son volume eleve d'exposition
+    explique pourquoi il genere beaucoup de fraudes en valeur absolue.
+
 =======================================================
 KPI 3 : RISQUE PAR TYPE DE CARTE
 =======================================================
@@ -74,18 +81,31 @@ KPI 8 : DÉSÉQUILIBRE (JUSTIFICATION DU SSL)
   pour apprendre la structure normale des données.
 
 =======================================================
-KPI 7 : IMPACT MÉTIER DU MODÈLE SSL
+KPI 7 : IMPACT METIER DU MODELE FINAL
 =======================================================
   Fraudes dans le dataset       : 20,663
   Montant total frauduleux      : $3,083,845
 
-  Avec notre modèle SSL (recall=43%) :
-    Fraudes détectées            : 8,924 / 20,663
-    Montant sauvé (estimé)       : $1,331,913
-    Fausses alertes              : 8,757
-    Coût d'investigation         : $265,215
-    Bénéfice net estimé          : $1,066,698
+  Modele retenu : XGBoost optimise + seuil optimal 0.56
+    AUC-ROC                       : 0.9718
+    Average Precision             : 0.8608
+    Precision                     : 88.0%
+    Recall                        : 77.0%
+    F1-score                      : 0.8210
 
-  Sans modèle (tout manuel) :
-    Coût si on vérifie tout      : $8,858,100
-    Coût si on ne vérifie rien   : $3,083,845 de pertes
+  Impact estime sur l'ensemble du dataset :
+    Fraudes detectees            : 15,904 / 20,663
+    Montant sauve estime         : $2,373,635
+    Fausses alertes              : 2,174
+    Cout d'investigation         : $271,170
+    Benefice net estime          : $2,102,465
+
+  Lecture metier :
+    Le seuil 0.56 maximise le F1-score du modele final.
+    Il combine une precision proche de 88% avec un recall proche de 77%,
+    ce qui donne un bon compromis entre detection des fraudes, charge
+    d'investigation et experience client.
+
+  Sans modele (tout manuel) :
+    Cout si on verifie tout      : $8,858,100
+    Cout si on ne verifie rien   : $3,083,845 de pertes
