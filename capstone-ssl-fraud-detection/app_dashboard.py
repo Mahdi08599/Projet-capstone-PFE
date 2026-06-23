@@ -458,6 +458,36 @@ def answer_business_recommendation(question):
     return answer, ["Stratégie métier", "Seuil métier", "KPIs modèle final"]
 
 
+def answer_prediction_scope(question):
+    q = normalize_text(question)
+    if not any(word in q for word in ["predire", "prediction", "prédire", "prédiction", "tester", "scoring", "score xgboost"]):
+        return None
+
+    if any(word in q for word in ["complete", "complète", "xgboost", "vraie", "vrai"]):
+        return (
+            "Pour une **prédiction complète XGBoost**, il faut passer par la pipeline modèle complète : préparation des données, "
+            "encodage des variables, construction des features et application du modèle entraîné. Le modèle final utilise environ "
+            "**743 variables**, donc il ne peut pas être reconstruit fidèlement à partir d'une phrase courte.\n\n"
+            "Ce que je peux faire ici :\n"
+            "- analyser une transaction décrite en langage naturel avec un **score explicatif** ;\n"
+            "- expliquer les facteurs de risque détectés ;\n"
+            "- rappeler le seuil final **0.56** et les performances du modèle ;\n"
+            "- orienter vers la page « Test du modèle » pour une simulation structurée.\n\n"
+            "Exemple à me donner : `transaction de 800 USD produit C carte crédit à 7h`.",
+            ["Pipeline modèle final", "Règles explicatives du dashboard"],
+        )
+
+    return (
+        "Je peux t'aider à analyser une transaction, mais il faut distinguer deux niveaux :\n\n"
+        "- **Score explicatif chatbot** : basé sur quelques signaux lisibles comme montant, produit, carte, heure, email et device.\n"
+        "- **Prédiction complète XGBoost** : basée sur le jeu transformé complet avec environ 743 variables.\n\n"
+        "Si tu veux une analyse conversationnelle, écris par exemple : "
+        "`transaction de 800 USD produit C carte crédit à 7h`. "
+        "Si tu veux une simulation structurée, utilise la page « Test du modèle ».",
+        ["Règles explicatives du dashboard", "Pipeline modèle final"],
+    )
+
+
 def chatbot_answer(question):
     q = normalize_text(question)
     sources = load_chatbot_sources()
@@ -504,12 +534,21 @@ def chatbot_answer(question):
             ["Seuil métier", "Explication KPI"],
         )
 
-    if any(word in q for word in ["predire", "prediction", "tester", "transaction individuelle"]):
+    if any(word in q for word in ["pas une prediction complete", "pas une prédiction complète", "prediction complete", "prédiction complète", "score explicatif"]):
         return (
-            "Pour prédire une transaction, il faut utiliser la page « Test du modèle ». "
-            "Mon rôle est différent : j'explique les résultats, les seuils, les KPIs et les choix méthodologiques.",
-            [],
+            "Ce score n'est pas une prédiction complète XGBoost parce qu'il est calculé à partir de quelques signaux lisibles : "
+            "montant, produit, type de carte, heure, email et device.\n\n"
+            "Le modèle XGBoost final, lui, utilise le jeu de données transformé avec environ **743 variables** : variables transactionnelles, "
+            "variables d'identité, encodages, agrégations et signaux issus de la préparation des données. Il produit une probabilité de fraude, "
+            "puis le seuil **0.56** transforme cette probabilité en décision.\n\n"
+            "Donc le chatbot sert à expliquer la logique métier d'une transaction de manière pédagogique. "
+            "La prédiction complète doit rester dans la pipeline modèle, avec les mêmes transformations que pendant l'entraînement.",
+            ["Règles explicatives du dashboard", "Pipeline modèle final"],
         )
+
+    prediction_scope = answer_prediction_scope(question)
+    if prediction_scope:
+        return prediction_scope
 
     transaction_lookup = answer_transaction_lookup(question)
     if transaction_lookup:
