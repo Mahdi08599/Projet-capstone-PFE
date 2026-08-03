@@ -21,6 +21,8 @@ import unicodedata
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import streamlit.components.v1 as components
+import json
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_RAW = os.path.join(BASE_DIR, "data", "raw")
@@ -546,6 +548,9 @@ def answer_prediction_scope(question):
     )
 
 
+OUT_OF_SCOPE_MARKER = "Je n'ai pas cette information dans les rapports du projet."
+
+
 def chatbot_answer(question):
     q = normalize_text(question)
     sources = load_chatbot_sources()
@@ -628,7 +633,7 @@ def chatbot_answer(question):
             "Les expérimentations ont ensuite montré que, sur ce dataset tabulaire, **XGBoost optimisé** était plus performant "
             "pour la décision finale. C'est justement ce qui rend la démarche solide : le projet ne force pas le SSL à gagner, "
             "il montre une évolution expérimentale vers une approche hybride.\n\n"
-            "Formulation soutenance : le SSL a servi à explorer l'apprentissage représentationnel, puis le système final combine "
+            "En synthèse : le SSL a servi à explorer l'apprentissage représentationnel, puis le système final combine "
             "XGBoost, seuil métier, KPIs et dashboard pour obtenir une solution plus exploitable par une banque digitale.",
             ["Comparaison modèles", "Labels limités", "Risque SSL guidé"],
         )
@@ -1284,6 +1289,33 @@ elif page == "💬 Assistant métier":
         "S'il ne trouve pas l'information dans le périmètre du projet, il doit répondre qu'il ne sait pas."
     )
 
+    # --- Option d'enrichissement ChatGPT via Puter.js (100% côté navigateur) ---
+    col_gpt, col_model = st.columns([2, 1])
+    with col_gpt:
+        use_gpt = st.checkbox(
+            "✨ Reformuler la réponse avec ChatGPT (gratuit, via Puter.js)",
+            value=False,
+            help=(
+                "La réponse locale validée reste toujours affichée. ChatGPT ne fait que la reformuler "
+                "de façon plus naturelle, sans inventer de nouveaux chiffres."
+            ),
+        )
+    with col_model:
+        gpt_model = st.selectbox(
+            "Modèle",
+            ["gpt-5.4-nano", "gpt-5.5", "gpt-4.1"],
+            index=0,
+            disabled=not use_gpt,
+            label_visibility="collapsed",
+        )
+
+    if use_gpt:
+        st.warning(
+            "Mode enrichi activé : la réponse de référence du projet reste affichée en premier. "
+            "La reformulation ChatGPT est purement pédagogique et n'est pas une source de résultats. "
+            "Une connexion à un compte Puter (gratuit) peut être demandée au premier usage."
+        )
+
     st.markdown("#### Les 5 piliers de l'assistant")
     pillars = pd.DataFrame([
         {
@@ -1334,7 +1366,7 @@ elif page == "💬 Assistant métier":
             }
         ]
 
-    st.markdown("#### Questions utiles pour la soutenance")
+    st.markdown("#### Questions utiles pour approfondir")
     suggestions = [
         "Transaction de 800$ produit C carte crédit à 7h du matin.",
         "Si on détecte 90% des fraudes, quel impact ?",
@@ -1360,8 +1392,69 @@ elif page == "💬 Assistant métier":
     if col_clear.button("Effacer la conversation", use_container_width=True):
         st.session_state.business_chat_history = st.session_state.business_chat_history[:1]
 
+    with st.expander("🔍 Interpréter une question formulée de façon inhabituelle (bêta)"):
+        st.caption(
+            "ChatGPT ne répond pas ici : il propose uniquement une reformulation vers une question "
+            "que l'assistant sait traiter, parmi les formulations reconnues ci-dessus."
+        )
+        st.info(
+            "Copiez le texte reformulé proposé par ChatGPT dans le champ de confirmation ci-dessous, "
+            "puis cliquez sur « Envoyer cette question »."
+        )
+        raw_question = st.text_area(
+            "Votre question, formulée librement :",
+            key="raw_question_interpret",
+            height=70,
+        )
+        col_interp, col_confirm = st.columns(2)
+        if col_interp.button("✨ Interpréter avec IA", use_container_width=True) and raw_question.strip():
+            suggestions_list = "\n".join(f"- {s}" for s in suggestions)
+            interpret_prompt = (
+                "Tu aides a reformuler une question utilisateur vers une formulation reconnue par un "
+                "assistant de projet de detection de fraude bancaire.\n\n"
+                "CONSIGNES STRICTES :\n"
+                "- Ne reponds PAS a la question, reformule-la uniquement.\n"
+                "- Choisis la formulation la plus proche parmi les exemples ci-dessous, ou reformule "
+                "de facon tres proche si aucun exemple ne correspond.\n"
+                "- Reponds uniquement avec la question reformulee en francais, sans commentaire, "
+                "sans guillemets, sans Markdown.\n\n"
+                f"EXEMPLES DE FORMULATIONS RECONNUES :\n{suggestions_list}\n\n"
+                f"QUESTION DE L'UTILISATEUR :\n{raw_question}"
+            )
+            interpret_html = f"""
+            <script src="https://js.puter.com/v2/"></script>
+            <div id="interpret-output" style="border-left:3px solid #6c5ce7; padding:10px 14px;
+                 background:rgba(108,92,231,0.06); border-radius:4px; white-space:pre-wrap;
+                 user-select:all; cursor:text;">
+                ⏳ Interpretation en cours...
+            </div>
+            <script>
+                puter.ai.chat({json.dumps(interpret_prompt)}, {{ model: "gpt-5.4-nano" }})
+                    .then(response => {{
+                        const text = (typeof response === "string") ? response
+                            : (response?.message?.content ?? JSON.stringify(response));
+                        document.getElementById("interpret-output").innerText = text.trim();
+                    }})
+                    .catch(err => {{
+                        document.getElementById("interpret-output").innerText =
+                            "Erreur d'interpretation (Puter.js) : " + err;
+                    }});
+            </script>
+            """
+            components.html(interpret_html, height=120, scrolling=True)
+            st.caption("👆 Sélectionnez et copiez le texte ci-dessus (déjà surligné au clic), puis collez-le ci-dessous.")
+
+        confirm_question = st.text_area(
+            "Question reformulée (collez ici avant envoi) :",
+            key="confirm_question_box",
+            height=70,
+        )
+        interpreted_question = None
+        if col_confirm.button("✅ Envoyer cette question", use_container_width=True) and confirm_question.strip():
+            interpreted_question = confirm_question.strip()
+
     user_question = st.chat_input("Ex: transaction de 800$ produit C carte crédit à 7h, seuil 0.56, modèle final, scénario 90%...")
-    question_to_process = user_question or selected_question
+    question_to_process = interpreted_question or user_question or selected_question
     if question_to_process:
         st.session_state.business_chat_history.append({
             "role": "user",
@@ -1369,19 +1462,111 @@ elif page == "💬 Assistant métier":
             "sources": [],
         })
         answer, answer_sources = chatbot_answer(question_to_process)
+
+        is_out_of_scope = answer.startswith(OUT_OF_SCOPE_MARKER)
+        rag_context = ""
+        if is_out_of_scope:
+            wide_excerpts = search_report_excerpts(question_to_process, sources, max_results=4)
+            rag_blocks = [f"[{source_name}]\n{block}" for _, source_name, block in wide_excerpts]
+            rag_context = "\n\n".join(rag_blocks)
+
         st.session_state.business_chat_history.append({
             "role": "assistant",
             "content": answer,
             "sources": answer_sources,
+            "question": question_to_process,
+            "gpt_enrich": use_gpt,
+            "gpt_model": gpt_model,
+            "is_out_of_scope": is_out_of_scope,
+            "rag_context": rag_context,
         })
 
     st.markdown("---")
-    for message in st.session_state.business_chat_history:
+    last_index = len(st.session_state.business_chat_history) - 1
+    for idx, message in enumerate(st.session_state.business_chat_history):
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
             if message.get("sources"):
                 st.caption("Sources : " + ", ".join(message["sources"]))
 
+            # Enrichissement ChatGPT : uniquement sur le dernier message assistant,
+            # et seulement si la case était cochée au moment de la question.
+            is_last_assistant_msg = message["role"] == "assistant" and idx == last_index
+            should_reformulate = is_last_assistant_msg and message.get("gpt_enrich") and not message.get("is_out_of_scope")
+            should_rag = is_last_assistant_msg and message.get("gpt_enrich") and message.get("is_out_of_scope") and message.get("rag_context")
+
+            if should_reformulate:
+                gpt_prompt = (
+                    "Tu es l'assistant d'explicabilité d'un projet académique de détection de fraude "
+                    "bancaire digitale (dataset IEEE-CIS, modèle final XGBoost optimisé).\n\n"
+                    "CONSIGNES STRICTES :\n"
+                    "- Reponds uniquement en francais.\n"
+                    "- Reformule la reponse de reference de facon claire et pedagogique.\n"
+                    "- N'invente AUCUN chiffre, AUCUNE metrique et AUCUN resultat nouveau.\n"
+                    "- Reprends exactement les valeurs numeriques presentes dans la reponse de reference.\n"
+                    "- Si une information n'est pas dans la reponse de reference, ne la mentionne pas.\n"
+                    "- N'utilise AUCUN formatage Markdown : pas d'asterisques, pas de gras, pas de listes a puces, "
+                    "pas de titres. Ecris uniquement en texte brut, en phrases completes.\n"
+                    "- Reste concis : 4 a 8 phrases maximum.\n\n"
+                    f"QUESTION DE L'UTILISATEUR :\n{message.get('question', '')}\n\n"
+                    f"REPONSE DE REFERENCE DU PROJET :\n{message['content']}"
+                )
+                label = f"✨ Reformulation ChatGPT ({message.get('gpt_model', 'gpt-5.4-nano')}) — pedagogique, non normative"
+                border_color = "#6c5ce7"
+            elif should_rag:
+                gpt_prompt = (
+                    "Tu es l'assistant d'explicabilité d'un projet academique de detection de fraude "
+                    "bancaire digitale. L'assistant local n'a pas trouve de reponse dediee a cette question, "
+                    "mais voici des extraits bruts des rapports du projet.\n\n"
+                    "CONSIGNES STRICTES :\n"
+                    "- Reponds uniquement en francais, en texte brut sans Markdown.\n"
+                    "- Utilise UNIQUEMENT les informations presentes dans les extraits ci-dessous.\n"
+                    "- N'invente AUCUN chiffre absent des extraits.\n"
+                    "- Si les extraits ne couvrent pas la question, dis clairement que l'information "
+                    "n'est pas disponible dans les rapports du projet. Ne comble jamais ce vide "
+                    "avec des connaissances generales sur la fraude bancaire ou le machine learning.\n"
+                    "- Reste concis : 4 a 8 phrases maximum.\n\n"
+                    f"QUESTION DE L'UTILISATEUR :\n{message.get('question', '')}\n\n"
+                    f"EXTRAITS BRUTS DES RAPPORTS :\n{message['rag_context']}"
+                )
+                label = "🔎 Synthese IA a partir des rapports bruts — hors perimetre valide, a verifier avant toute citation officielle"
+                border_color = "#d97706"
+            else:
+                label = None
+
+            if label:
+                gpt_html = f"""
+                <script src="https://js.puter.com/v2/"></script>
+                <div style="font-family: 'Source Sans Pro', sans-serif; font-size: 0.95rem;">
+                    <div style="font-size:0.8rem; color:#6b7280; margin-bottom:6px;">
+                        {label}
+                    </div>
+                    <div id="gpt-output-{idx}"
+                         style="border-left:3px solid {border_color}; padding:10px 14px;
+                                background:rgba(108,92,231,0.06); border-radius:4px;
+                                white-space:pre-wrap; line-height:1.5;">
+                        ⏳ Generation en cours...
+                    </div>
+                </div>
+                <script>
+                    puter.ai.chat(
+                        {json.dumps(gpt_prompt)},
+                        {{ model: {json.dumps(message.get("gpt_model", "gpt-5.4-nano"))} }}
+                    )
+                    .then(response => {{
+                        const text = (typeof response === "string")
+                            ? response
+                            : (response?.message?.content ?? JSON.stringify(response));
+                        document.getElementById("gpt-output-{idx}").innerText = text;
+                    }})
+                    .catch(err => {{
+                        document.getElementById("gpt-output-{idx}").innerText =
+                            "⚠️ ChatGPT indisponible (Puter.js) : " + err +
+                            "\\n\\nLa reponse validee du projet reste affichee ci-dessus.";
+                    }});
+                </script>
+                """
+                components.html(gpt_html, height=300, scrolling=True)
 
 elif page == "🔬 Itérations du projet":
     st.title("🔬 Démarche itérative")
