@@ -578,7 +578,10 @@ def chatbot_answer(question):
     if business_recommendation:
         return business_recommendation
 
-    if "auc" in q and any(word in q for word in ["quoi", "veut", "signifie", "definition", "définition", "c'est quoi"]):
+    definition_words = ["quoi", "veut", "signifie", "definition", "définition"]
+    has_definition_word = any(re.search(r"\b" + re.escape(w) + r"\b", q) for w in definition_words) or "c'est quoi" in q
+
+    if re.search(r"\bauc\b", q) and has_definition_word:
         return (
             "L'**AUC-ROC** mesure la capacité globale du modèle à classer les fraudes au-dessus des transactions légitimes. "
             "Une AUC proche de 1 signifie que le modèle sépare très bien les deux classes. "
@@ -588,7 +591,7 @@ def chatbot_answer(question):
             ["Explication KPI", "Modèle final"],
         )
 
-    if "seuil" in q and any(word in q for word in ["quoi", "veut", "signifie", "definition", "définition", "c'est quoi"]):
+    if "seuil" in q and has_definition_word:
         return (
             "Le **seuil de décision** est la limite à partir de laquelle une transaction est considérée comme suspecte. "
             "Par exemple, avec un seuil de **0.56**, une transaction dont le score de fraude est supérieur ou égal à 0.56 est classée comme fraude.\n\n"
