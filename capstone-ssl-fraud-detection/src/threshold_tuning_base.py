@@ -133,7 +133,7 @@ def plot_thresholds(analysis, scenarios):
     axes[1].plot(
         analysis["threshold"],
         analysis["investigation_cost"] / 1000,
-        label="Cout investigation ($K)",
+        label="Cout total investigations ($K)",
         linewidth=2,
         color="#D97706",
     )
@@ -152,13 +152,26 @@ def plot_thresholds(analysis, scenarios):
 
     if RECOMMENDED_SCENARIO in scenarios:
         row = scenarios[RECOMMENDED_SCENARIO]
+        # Les trois courbes sont tres resserrees autour du seuil retenu :
+        # on marque chaque metrique par un point et on donne les valeurs,
+        # sinon la fleche seule laisse croire qu'elle designe une courbe.
+        for metric, color in (("precision", "#1f77b4"), ("recall", "#ff7f0e"), ("f1", "#2ca02c")):
+            axes[0].plot(
+                row["threshold"], row[metric], "o", color=color, markersize=7,
+                markeredgecolor="white", markeredgewidth=1.2, zorder=5,
+            )
         axes[0].annotate(
-            f"Seuil retenu: {row['threshold']:.2f}",
-            xy=(row["threshold"], row["f1"]),
-            xytext=(row["threshold"] - 0.19, row["f1"] + 0.12),
+            f"Seuil retenu {row['threshold']:.2f}\n"
+            f"Precision {row['precision']:.3f}\n"
+            f"Recall {row['recall']:.3f}\n"
+            f"F1 {row['f1']:.3f}",
+            xy=(row["threshold"], row["recall"]),
+            xytext=(row["threshold"] + 0.07, row["recall"] - 0.30),
             arrowprops={"arrowstyle": "->", "color": "#B91C1C"},
             color="#B91C1C",
-            fontsize=10,
+            fontsize=9,
+            bbox={"boxstyle": "round", "facecolor": "white",
+                  "edgecolor": "#B91C1C", "alpha": 0.9},
         )
         axes[1].annotate(
             f"Strategie equilibree\n${row['net_benefit']/1000:.0f}K",

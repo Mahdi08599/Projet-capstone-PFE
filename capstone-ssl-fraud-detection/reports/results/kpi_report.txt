@@ -70,17 +70,6 @@ KPI 6 : RISQUE PAR DEVICE
   Sans info  : 2.10% (449,730 tx)
 
 =======================================================
-KPI 8 : DÉSÉQUILIBRE (JUSTIFICATION DU SSL)
-=======================================================
-  Légitimes  : 569,877 (96.50%)
-  Fraudes    : 20,663 (3.50%)
-  Ratio      : 1 fraude pour 27 transactions légitimes
-
-  C'est pourquoi le self-supervised learning est pertinent :
-  on peut utiliser les 569,877 transactions non labellisées
-  pour apprendre la structure normale des données.
-
-=======================================================
 KPI 7 : IMPACT METIER DU MODELE FINAL
 =======================================================
   Fraudes dans le dataset       : 20,663
@@ -109,3 +98,14 @@ KPI 7 : IMPACT METIER DU MODELE FINAL
   Sans modele (tout manuel) :
     Cout si on verifie tout      : $8,858,100
     Cout si on ne verifie rien   : $3,083,845 de pertes
+
+=======================================================
+KPI 8 : DÉSÉQUILIBRE (JUSTIFICATION DU SSL)
+=======================================================
+  Légitimes  : 569,877 (96.50%)
+  Fraudes    : 20,663 (3.50%)
+  Ratio      : 1 fraude pour 27 transactions légitimes
+
+  C'est pourquoi le self-supervised learning est pertinent :
+  on peut utiliser les 569,877 transactions non labellisées
+  pour apprendre la structure normale des données.

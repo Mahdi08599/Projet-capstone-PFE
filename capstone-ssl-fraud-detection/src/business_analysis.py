@@ -395,47 +395,6 @@ def kpi_devices(df, report):
     print("  ✓ business_devices.png")
 
 
-def kpi_impact_modele(df, report):
-    """KPI 7 : Quel serait l'impact métier du modèle SSL ?"""
-    print("\n─── KPI 7 : IMPACT MÉTIER DU MODÈLE ───")
-
-    fraud = df[df["isFraud"] == 1]
-    total_fraud_amount = fraud["TransactionAmt"].sum()
-    n_frauds = len(fraud)
-
-    # Résultats V2
-    recall_v2 = 0.4319
-    precision_v2 = 0.5047
-    n_detected = int(n_frauds * recall_v2)
-    amount_saved = total_fraud_amount * recall_v2
-    n_false_alerts = int(n_detected / precision_v2) - n_detected
-
-    # Coût estimé d'une investigation manuelle (industrie bancaire)
-    cost_per_investigation = 15  # dollars
-    cost_investigations = (n_detected + n_false_alerts) * cost_per_investigation
-
-    report.append("\n" + "=" * 55)
-    report.append("KPI 7 : IMPACT MÉTIER DU MODÈLE SSL")
-    report.append("=" * 55)
-    report.append(f"  Fraudes dans le dataset       : {n_frauds:,}")
-    report.append(f"  Montant total frauduleux      : ${total_fraud_amount:,.0f}")
-    report.append(f"")
-    report.append(f"  Avec notre modèle SSL (recall={recall_v2:.0%}) :")
-    report.append(f"    Fraudes détectées            : {n_detected:,} / {n_frauds:,}")
-    report.append(f"    Montant sauvé (estimé)       : ${amount_saved:,.0f}")
-    report.append(f"    Fausses alertes              : {n_false_alerts:,}")
-    report.append(f"    Coût d'investigation         : ${cost_investigations:,.0f}")
-    report.append(f"    Bénéfice net estimé          : ${amount_saved - cost_investigations:,.0f}")
-    report.append(f"")
-    report.append(f"  Sans modèle (tout manuel) :")
-    report.append(f"    Coût si on vérifie tout      : ${len(df) * cost_per_investigation:,.0f}")
-    report.append(f"    Coût si on ne vérifie rien   : ${total_fraud_amount:,.0f} de pertes")
-
-    print(f"  Fraudes détectées : {n_detected:,} / {n_frauds:,}")
-    print(f"  Montant sauvé    : ${amount_saved:,.0f}")
-    print(f"  Bénéfice net     : ${amount_saved - cost_investigations:,.0f}")
-
-
 def kpi_desequilibre(df, report):
     """KPI 8 : Visualisation du déséquilibre — la raison du SSL."""
     print("\n─── KPI 8 : DÉSÉQUILIBRE DES CLASSES ───")
@@ -548,8 +507,8 @@ def run():
     kpi_temporel(df, report)
     kpi_emails(df, report)
     kpi_devices(df, report)
-    kpi_desequilibre(df, report)
     kpi_impact_modele(df, report)
+    kpi_desequilibre(df, report)
 
     # Sauvegarder le rapport
     report_path = os.path.join(RESULTS_DIR, "kpi_report.txt")
