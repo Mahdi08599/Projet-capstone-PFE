@@ -506,16 +506,16 @@ L'optimisation des hyperparametres a permis une amelioration notable par rapport
 
 \begin{table}[H]
 \centering
-\caption{Comparaison avant et apres optimisation}
+\caption{Comparaison avant et apres optimisation (chaque modele evalue a son propre seuil de meilleur F1 : 0,83 avant, 0,56 apres)}
 \begin{tabular}{lccc}
 \toprule
 \textbf{Metrique} & \textbf{Avant} & \textbf{Apres} & \textbf{Gain} \\
 \midrule
 AUC-ROC & 0,9494 & 0,9718 & +0,0224 \\
 Average Precision & 0,7020 & 0,8608 & +0,1588 \\
-F1-score & 0,6660 & 0,8210 & +0,1550 \\
-Precision & 0,7340 & 0,8797 & +0,1457 \\
-Recall & 0,6100 & 0,7697 & +0,1597 \\
+F1-score & 0,6644 & 0,8210 & +0,1566 \\
+Precision & 0,7458 & 0,8797 & +0,1339 \\
+Recall & 0,5991 & 0,7697 & +0,1706 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -633,22 +633,23 @@ Ces chiffres donnent du sens aux metriques ML. Le modele permet non seulement de
 
 Une analyse specifique des fraudes non detectees a ete realisee avec le script \texttt{src/analyze\_missed\_frauds.py}. L'objectif n'etait pas seulement de mesurer le nombre d'erreurs, mais de comprendre leur profil afin d'identifier les limites du modele et de proposer des contre-mesures operationnelles. Cette analyse est importante car un modele de fraude ne doit pas uniquement etre evalue sur ses succes : les faux negatifs representent les transactions frauduleuses qui passent sous le radar et qui generent donc une perte directe pour la banque.
 
-Le script charge les probabilites finales du modele XGBoost optimise, reconstruit le meme echantillon de validation stratifie, puis compare trois groupes : les fraudes detectees, les fraudes ratees et les transactions legitimes. Pour cette analyse d'erreur, un seuil d'etude de \textbf{0,40} a ete utilise afin d'observer les fraudes qui resteraient non signalees avec un seuil plus permissif que le seuil final de decision. Sur l'ensemble de validation, \textbf{536 fraudes sur 4 133} obtiennent un score inferieur a 0,40. Elles constituent donc le coeur de l'analyse des faux negatifs.
+Le script charge les probabilites du modele final retenu (fichier \texttt{tuned\_predictions.npz}), reconstruit le meme echantillon de validation stratifie, puis compare trois groupes : les fraudes detectees, les fraudes ratees et les transactions legitimes. L'analyse est menee au \textbf{seuil de decision retenu de 0,56}, afin de mesurer les faux negatifs reellement subis en exploitation. Sur l'ensemble de validation, \textbf{952 fraudes sur 4 133}, soit 23,0 \%, obtiennent un score inferieur a 0,56. A titre de sensibilite, un seuil plus permissif de 0,40 ne ramenerait ce nombre qu'a 801 fraudes ratees (19,4 \%) : l'essentiel des faux negatifs ne se joue donc pas au voisinage du seuil.
 
 \begin{table}[H]
 \centering
-\caption{Synthese de l'analyse des fraudes non detectees au seuil 0,40}
+\caption{Synthese de l'analyse des fraudes non detectees au seuil retenu 0,56}
 \begin{tabular}{lc}
 \toprule
 \textbf{Indicateur} & \textbf{Valeur} \\
 \midrule
 Fraudes totales dans l'ensemble de validation & 4 133 \\
-Fraudes non detectees avec score $< 0,40$ & 536 \\
-Part des fraudes non detectees & 13,0\% \\
-Fraudes proches du seuil ($0,30 \leq score < 0,40$) & 169 \\
-Fraudes avec score tres bas ($score < 0,10$) & 61 \\
-Montant median des fraudes ratees & 87 USD \\
-Montant median des fraudes detectees & 73 USD \\
+Fraudes non detectees avec score $< 0,56$ & 952 \\
+Part des fraudes non detectees & 23,0\% \\
+Fraudes proches du seuil ($0,46 \leq score < 0,56$) & 97 \\
+Fraudes avec score tres bas ($score < 0,10$) & 458 \\
+Montant median des fraudes ratees & 97 USD \\
+Montant median des fraudes detectees & 67 USD \\
+Rappel : fraudes non detectees au seuil permissif 0,40 & 801 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -660,11 +661,13 @@ Montant median des fraudes detectees & 73 USD \\
 \label{fig:missed-frauds}
 \end{figure}
 
-Les \textbf{169 fraudes proches du seuil} constituent une zone grise interessante. Elles ne sont pas totalement invisibles pour le modele : leur score est deja eleve, mais pas assez pour etre classees comme suspectes au seuil d'etude. Elles pourraient etre recuperees en abaissant le seuil, au prix d'une augmentation du nombre de fausses alertes. Cette observation confirme que le choix du seuil est un arbitrage metier entre recall et precision.
+Les \textbf{97 fraudes proches du seuil} constituent une zone grise interessante. Elles ne sont pas totalement invisibles pour le modele : leur score est deja eleve, mais pas assez pour etre classees comme suspectes au seuil retenu. Elles pourraient etre recuperees en abaissant le seuil, au prix d'une augmentation du nombre de fausses alertes. Cette observation confirme que le choix du seuil est un arbitrage metier entre recall et precision. Elle montre aussi que la marge de progression par simple deplacement du seuil est limitee : ces 97 cas ne representent que 10 \% des faux negatifs.
 
-Les \textbf{61 fraudes avec un score inferieur a 0,10} sont plus critiques. Le modele les considere comme tres proches de transactions legitimes. Ces cas illustrent une limite naturelle du machine learning supervise : lorsque les fraudeurs imitent fortement les comportements normaux et que les variables disponibles ne contiennent pas de signal distinctif suffisant, le modele ne peut pas separer correctement fraude et legitimite. L'ajout d'un algorithme plus complexe ne suffirait pas necessairement ; il faudrait surtout enrichir les donnees.
+Les \textbf{458 fraudes avec un score inferieur a 0,10}, soit pres de la moitie des faux negatifs, sont plus critiques. Le modele les considere comme tres proches de transactions legitimes. Ces cas illustrent une limite naturelle du machine learning supervise : lorsque les fraudeurs imitent fortement les comportements normaux et que les variables disponibles ne contiennent pas de signal distinctif suffisant, le modele ne peut pas separer correctement fraude et legitimite. L'ajout d'un algorithme plus complexe ne suffirait pas necessairement ; il faudrait surtout enrichir les donnees.
 
-L'analyse qualitative montre que les fraudes ratees ressemblent davantage aux transactions legitimes : elles sont souvent associees au produit W, a des cartes debit, a des domaines email courants et a moins de signaux device distinctifs. Elles ne presentent donc pas les marqueurs classiques des fraudes plus faciles a detecter. Cette conclusion permet de formuler une recommandation operationnelle claire : pour reduire davantage les faux negatifs, il faut completer le scoring ML par des donnees comportementales et des controles metier.
+L'analyse qualitative montre que les fraudes ratees ressemblent davantage aux transactions legitimes : elles sont associees au produit W dans 68 \% des cas (contre 36 \% pour les fraudes detectees, et 76 \% pour les transactions legitimes), a des cartes debit (63 \%), a des domaines email courants et surtout a une absence d'information device dans 71 \% des cas (contre 37 \% pour les fraudes detectees). Elles ne presentent donc pas les marqueurs classiques des fraudes plus faciles a detecter.
+
+Un point merite une attention particuliere : les fraudes ratees portent sur des \textbf{montants plus eleves} que les fraudes detectees (mediane de 97 USD contre 67 USD, moyenne de 191 USD contre 144 USD). Le modele rate donc proportionnellement les cas les plus couteux. Cela signifie que l'estimation d'impact financier presentee plus haut, qui applique un montant moyen uniforme de 149 USD, est plutot optimiste sur la partie non detectee : la perte residuelle reelle est superieure a celle que suggere le calcul moyen. C'est un argument supplementaire en faveur des contre-mesures ci-dessous plutot qu'un simple abaissement du seuil. Cette conclusion permet de formuler une recommandation operationnelle claire : pour reduire davantage les faux negatifs, il faut completer le scoring ML par des donnees comportementales et des controles metier.
 
 Les contre-mesures recommandees sont les suivantes :
 \begin{itemize}
@@ -1024,7 +1027,7 @@ Faux negatif & Fraude non detectee & Perte financiere directe et risque de repet
 
 \chapter{Annexe I - Script d'analyse des fraudes non detectees}
 
-Le script \texttt{src/analyze\_missed\_frauds.py} complete l'evaluation du modele final en analysant les faux negatifs. Il charge les predictions finales sauvegardees dans \texttt{reports/results/final\_predictions.npz}, reconstruit l'ensemble de validation avec le meme split stratifie, puis identifie les fraudes dont le score est inferieur a 0,40.
+Le script \texttt{src/analyze\_missed\_frauds.py} complete l'evaluation du modele final en analysant les faux negatifs. Il charge les predictions du modele final retenu, sauvegardees dans \texttt{reports/results/tuned\_predictions.npz}, reconstruit l'ensemble de validation avec le meme split stratifie, puis identifie les fraudes dont le score est inferieur au seuil de decision de 0,56. Un seuil permissif de 0,40 est egalement calcule a titre de sensibilite.
 
 Les sorties principales du script sont :
 \begin{itemize}
