@@ -2,9 +2,14 @@
 =================================================================
 Analyse des fraudes non détectées
 =================================================================
-Les 536 fraudes avec un score < 0.40 passent sous le radar.
-Ce script analyse leur profil pour comprendre POURQUOI
-le modèle les rate et proposer des contre-mesures.
+Les fraudes dont le score reste sous le seuil de décision passent
+sous le radar. Ce script analyse leur profil pour comprendre
+POURQUOI le modèle les rate et proposer des contre-mesures.
+
+L'analyse est menée sur les prédictions du modèle final retenu
+(XGBoost optimisé, AUC 0.9718) : reports/results/tuned_predictions.npz.
+Seuil principal = 0.56 (seuil retenu). Un seuil plus permissif de
+0.40 est également calculé, à titre de sensibilité.
 
 Usage :
     python src/analyze_missed_frauds.py
@@ -25,7 +30,8 @@ RAW_DIR = os.path.join("..", "data", "raw")
 os.makedirs(FIGURES_DIR, exist_ok=True)
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
-SEUIL = 0.40
+SEUIL = 0.56          # seuil de décision retenu pour le modèle final
+SEUIL_PERMISSIF = 0.40  # seuil de sensibilité, plus permissif
 
 
 def run():
@@ -33,9 +39,9 @@ def run():
     print("  ANALYSE DES FRAUDES NON DÉTECTÉES")
     print("=" * 60)
 
-    # 1. Charger les prédictions
+    # 1. Charger les prédictions du modèle final retenu
     print("\n1. Chargement des prédictions...")
-    preds = np.load(os.path.join(RESULTS_DIR, "final_predictions.npz"))
+    preds = np.load(os.path.join(RESULTS_DIR, "tuned_predictions.npz"))
     y_true = preds["y_true"]
     y_proba = preds["y_proba"]
 
@@ -198,7 +204,8 @@ def run():
                  ["Legitime"] * 5000)
     })
     palette = {"Fraude ratee": "#E53935", "Fraude detectee": "#FF9800", "Legitime": "#2196F3"}
-    sns.boxplot(data=data_box, x="Type", y="Montant", ax=axes[1], palette=palette)
+    sns.boxplot(data=data_box, x="Type", y="Montant", hue="Type", legend=False,
+                ax=axes[1], palette=palette)
     axes[1].set_title("Montant par type de transaction", fontsize=12)
     axes[1].set_ylabel("Montant ($)", fontsize=11)
 
@@ -207,15 +214,31 @@ def run():
     plt.close()
     print("   ✓ missed_frauds_analysis.png")
 
+    # Sensibilité : même analyse avec un seuil plus permissif
+    missed_perm = all_frauds[all_frauds["score"] < SEUIL_PERMISSIF]
+    close_perm = missed_perm[missed_perm["score"] >= SEUIL_PERMISSIF - 0.10]
+    very_low_perm = missed_perm[missed_perm["score"] < 0.10]
+
     # Sauvegarder le rapport
     with open(os.path.join(RESULTS_DIR, "missed_frauds_report.txt"), "w", encoding="utf-8") as f:
-        f.write(f"ANALYSE DES FRAUDES NON DETECTEES\n")
-        f.write(f"Seuil : {SEUIL}\n")
-        f.write(f"Fraudes ratees : {n_missed} / {n_total}\n\n")
+        f.write("ANALYSE DES FRAUDES NON DETECTEES\n")
+        f.write("Modele : XGBoost optimise (final), tuned_predictions.npz\n\n")
+
+        f.write(f"SEUIL RETENU : {SEUIL}\n")
+        f.write("-" * 40 + "\n")
+        f.write(f"Fraudes ratees : {n_missed} / {n_total} ({n_missed/n_total*100:.1f}%)\n")
         f.write(f"Montant median ratees    : ${missed['TransactionAmt'].median():.0f}\n")
-        f.write(f"Montant median detectees : ${detected['TransactionAmt'].median():.0f}\n\n")
-        f.write(f"Proches du seuil : {len(close)}\n")
-        f.write(f"Score tres bas   : {len(very_low)}\n")
+        f.write(f"Montant median detectees : ${detected['TransactionAmt'].median():.0f}\n")
+        f.write(f"Proches du seuil (>= {SEUIL-0.10:.2f}) : {len(close)}\n")
+        f.write(f"Score tres bas (< 0.10)   : {len(very_low)}\n\n")
+
+        f.write(f"SEUIL PERMISSIF (sensibilite) : {SEUIL_PERMISSIF}\n")
+        f.write("-" * 40 + "\n")
+        f.write(f"Fraudes ratees : {len(missed_perm)} / {n_total} "
+                f"({len(missed_perm)/n_total*100:.1f}%)\n")
+        f.write(f"Montant median ratees    : ${missed_perm['TransactionAmt'].median():.0f}\n")
+        f.write(f"Proches du seuil (>= {SEUIL_PERMISSIF-0.10:.2f}) : {len(close_perm)}\n")
+        f.write(f"Score tres bas (< 0.10)   : {len(very_low_perm)}\n")
     print("   ✓ missed_frauds_report.txt")
 
     print(f"\n{'='*60}")

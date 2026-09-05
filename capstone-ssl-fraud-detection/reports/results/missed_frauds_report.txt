@@ -1,9 +1,17 @@
 ANALYSE DES FRAUDES NON DETECTEES
-Seuil : 0.4
-Fraudes ratees : 536 / 4133
+Modele : XGBoost optimise (final), tuned_predictions.npz
 
-Montant median ratees    : $87
-Montant median detectees : $73
+SEUIL RETENU : 0.56
+----------------------------------------
+Fraudes ratees : 952 / 4133 (23.0%)
+Montant median ratees    : $97
+Montant median detectees : $67
+Proches du seuil (>= 0.46) : 97
+Score tres bas (< 0.10)   : 458
 
-Proches du seuil : 169
-Score tres bas   : 61
+SEUIL PERMISSIF (sensibilite) : 0.4
+----------------------------------------
+Fraudes ratees : 801 / 4133 (19.4%)
+Montant median ratees    : $92
+Proches du seuil (>= 0.30) : 89
+Score tres bas (< 0.10)   : 458
