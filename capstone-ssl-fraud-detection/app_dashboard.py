@@ -109,6 +109,42 @@ def load_predictions():
 
 
 @st.cache_data
+def load_pr_curve():
+    """Courbe precision/recall reelle du modele final retenu.
+
+    Sert aux simulations d'impact metier : la precision ne peut pas rester
+    figee a 0.8797 quand on fait varier le recall. Les deux se deplacent
+    ensemble le long de la courbe de decision du modele.
+    """
+    y_true, y_proba = load_predictions()
+    if y_true is None:
+        return None
+    order = np.argsort(-y_proba)
+    y = y_true[order].astype(int)
+    tp = np.cumsum(y)
+    fp = np.cumsum(1 - y)
+    recall = tp / y.sum()
+    precision = tp / (tp + fp)
+    # Enveloppe monotone : precision atteignable pour un recall >= cible
+    precision = np.maximum.accumulate(precision[::-1])[::-1]
+    return recall, precision
+
+
+def precision_for_recall(recall_target):
+    """Precision reellement atteignable pour un recall vise.
+
+    Retourne (precision, lue_sur_la_courbe). Si les predictions ne sont pas
+    disponibles (deploiement sans le fichier .npz), on retombe sur la
+    precision du seuil retenu en signalant l'approximation.
+    """
+    curve = load_pr_curve()
+    if curve is None:
+        return FINAL_METRICS["precision"], False
+    recall, precision = curve
+    return float(np.interp(recall_target, recall, precision)), True
+
+
+@st.cache_data
 def load_transaction_lookup():
     tx_path = os.path.join(DATA_RAW, "train_transaction.csv")
     if not os.path.exists(tx_path):
@@ -463,21 +499,29 @@ def answer_scenario_simulation(question):
         fraud = df[df["isFraud"] == 1]
         fraud_count = len(fraud)
         fraud_amount = fraud["TransactionAmt"].sum()
+    precision, from_curve = precision_for_recall(recall)
     detected = int(fraud_count * recall)
     saved = fraud_amount * recall
-    false_alerts = int(detected * (1 - FINAL_METRICS["precision"]) / FINAL_METRICS["precision"])
+    false_alerts = int(detected * (1 - precision) / precision)
     investigation_cost = (detected + false_alerts) * cost_inv
     net = saved - investigation_cost
 
+    source_precision = (
+        "lue sur la courbe precision/recall du modele"
+        if from_curve else "approximee par la precision du seuil retenu"
+    )
     response = (
         f"Simulation simplifiée avec **{recall:.0%} de fraudes détectées** :\n\n"
         f"- Fraudes détectées estimées : **{detected:,} / {fraud_count:,}**.\n"
+        f"- Précision atteignable à ce niveau de recall : **{precision:.1%}** ({source_precision}).\n"
         f"- Montant frauduleux sauvé estimé : **{money_usd(saved)}**.\n"
         f"- Fausses alertes estimées : **{false_alerts:,}**.\n"
         f"- Coût d'investigation utilisé : **{money_usd(cost_inv)} par alerte**.\n"
         f"- Coût total d'investigation : **{money_usd(investigation_cost)}**.\n"
         f"- Bénéfice net estimé : **{money_usd(net)}**.\n\n"
-        "Lecture métier : augmenter le recall protège mieux contre les pertes, mais augmente souvent la charge d'investigation. "
+        "Lecture métier : augmenter le recall protège mieux contre les pertes, mais dégrade la précision "
+        "et fait exploser la charge d'investigation. Au seuil retenu de 0.56 la précision est de 88%, "
+        "mais viser 95% de recall la ferait tomber à 16% — soit plus de 100 000 fausses alertes. "
         "C'est exactement le compromis que le seuil métier doit piloter."
     )
     return response, ["Simulation métier", "Dataset brut", "Métriques modèle final"]
@@ -1045,20 +1089,57 @@ elif page == "📈 KPIs Business":
 
         st.markdown("---")
         st.subheader("💰 Simulateur d'impact financier")
+        st.caption(
+            "La précision n'est pas un paramètre libre : elle est lue sur la courbe "
+            "precision/recall réelle du modèle. Viser plus de recall dégrade "
+            "mécaniquement la précision et multiplie les fausses alertes."
+        )
         col1, col2 = st.columns([1,2])
         with col1:
-            recall_pct = st.slider("Recall (%)", 10, 95, 77)
-            cost_inv = st.number_input("Coût investigation ($)", 5, 50, 15)
+            recall_pct = st.slider("Recall visé (%)", 10, 95, 77)
+            cost_inv = st.number_input("Coût par investigation ($ / cas)", 5, 50, 15)
         recall = recall_pct/100
+        precision, from_curve = precision_for_recall(recall)
         n_det = int(fraud_count*recall)
         saved = fraud_amount*recall
-        n_fp = int(n_det*(1-FINAL_METRICS["precision"])/FINAL_METRICS["precision"])
+        n_fp = int(n_det*(1-precision)/precision)
         net = saved-(n_det+n_fp)*cost_inv
         with col2:
             cc1,cc2,cc3 = st.columns(3)
             cc1.metric("Fraudes détectées", f"{n_det:,}")
             cc2.metric("Montant sauvé", f"${saved:,.0f}")
             cc3.metric("Bénéfice net", f"${net:,.0f}")
+            cc4,cc5,cc6 = st.columns(3)
+            cc4.metric("Précision atteignable", f"{precision:.1%}")
+            cc5.metric("Fausses alertes", f"{n_fp:,}")
+            cc6.metric("Coût investigations", f"${(n_det+n_fp)*cost_inv:,.0f}")
+        if not from_curve:
+            st.info(
+                "Prédictions du modèle indisponibles : précision approximée par celle "
+                "du seuil retenu (0.8797). Les scénarios à fort recall sont optimistes."
+            )
+
+        # Le benefice net sur toute la plage de recall : c'est l'arbitrage metier
+        recall_grid = np.arange(0.10, 0.96, 0.01)
+        net_grid = []
+        for r in recall_grid:
+            p, _ = precision_for_recall(r)
+            det = fraud_count * r
+            fp_r = det * (1 - p) / p
+            net_grid.append(fraud_amount * r - (det + fp_r) * cost_inv)
+        fig_sim = go.Figure()
+        fig_sim.add_trace(go.Scatter(
+            x=recall_grid*100, y=net_grid, mode="lines",
+            line=dict(width=3, color="#2196F3"), name="Bénéfice net"))
+        fig_sim.add_trace(go.Scatter(
+            x=[recall_pct], y=[net], mode="markers",
+            marker=dict(size=13, color="#E53935"), name="Votre scénario"))
+        fig_sim.add_vline(x=FINAL_METRICS["recall"]*100, line_dash="dash",
+                          line_color="gray", annotation_text="Seuil retenu 0.56")
+        fig_sim.update_layout(height=340, margin=dict(t=40, b=10),
+                              xaxis_title="Recall visé (%)",
+                              yaxis_title="Bénéfice net estimé ($)")
+        st.plotly_chart(fig_sim, use_container_width=True)
     except Exception as e:
         st.error(f"Erreur : {e}")
 
@@ -1573,15 +1654,20 @@ elif page == "💬 Assistant métier":
 
 elif page == "🔬 Itérations du projet":
     st.title("🔬 Démarche itérative")
-    st.markdown("Chaque itération a amélioré le modèle.")
+    st.markdown(
+        "Chaque itération a fait progresser le projet — y compris celles qui ont échoué. "
+        "Les seuils adaptatifs par segment ont été testés puis **écartés** : ils gagnent "
+        "1,5 pt de recall mais coûtent 20 pts de précision. "
+        "Chaque modèle est évalué à son seuil de meilleur F1."
+    )
     st.markdown("---")
     iterations = pd.DataFrame({
         "Itération": ["MLP V1 (gelé)","MLP V2 (dégelé)","XGBoost base",
-                      "XGBoost + adaptatif","XGBoost optimisé (final)"],
+                      "XGBoost + adaptatif (écarté)","XGBoost optimisé (final)"],
         "AUC": [0.8224, 0.8932, 0.9494, 0.9494, 0.9718],
-        "Precision": [0.7910, 0.5047, 0.7340, 0.7340, 0.8797],
-        "Recall": [0.1365, 0.4319, 0.6100, 0.6660, 0.7697],
-        "F1": [0.2328, 0.4654, 0.6660, 0.6660, 0.8210],
+        "Precision": [0.7910, 0.5047, 0.7458, 0.4530, 0.8797],
+        "Recall": [0.1365, 0.4319, 0.5991, 0.6660, 0.7697],
+        "F1": [0.2328, 0.4654, 0.6644, 0.5390, 0.8210],
     })
     st.dataframe(
         iterations.style.background_gradient(subset=["AUC","Recall","F1"], cmap="Greens")
@@ -1600,7 +1686,9 @@ elif page == "🔬 Itérations du projet":
     st.markdown("""
     1. **Le SSL n'a pas surpassé XGBoost** sur ce dataset tabulaire — résultat honnête,
        cohérent avec la littérature (SSL excelle en image/texte, moins en tabulaire).
-    2. **L'optimisation des hyperparamètres a été décisive** : +15 pts de F1, de 61% à 77% de recall.
-    3. **Les fraudes non détectées sont sophistiquées** : elles imitent les transactions légitimes.
+    2. **L'optimisation des hyperparamètres a été décisive** : +15,7 pts de F1, de 59,9% à 77,0% de recall.
+    3. **Les fraudes non détectées sont sophistiquées** : sur les 952 fraudes ratées au seuil 0.56,
+       458 ont un score < 0.10 — elles imitent parfaitement les transactions légitimes.
+       Elles portent aussi des montants plus élevés (médiane $97 vs $67 pour les détectées).
     4. **La stratégie de seuil est un choix métier** : recall (sécurité) vs precision (efficacité).
     """)
